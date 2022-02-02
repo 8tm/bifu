@@ -1,0 +1,13 @@
+[run]
+omit = tests/integration/*
+
+[report]
+precision = 2
+exclude_lines =
+    continue
+    def __repr__
+    except ImportError
+    if __name__ == .__main__.:
+    pass
+    pragma: no cover
+    raise NotImplementedError
