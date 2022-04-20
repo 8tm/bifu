@@ -1,18 +1,39 @@
+#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+#                                               P R E    C O M M I T
+#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
 pre-commit:
+
+
+  # Branch name - master
   master:
+
+    # Branch description (optional)
     description: Protect branch master from commits
+
+    # Block commit on master branch
     block_commits: True
 
+
+  # Branch name - main
   main:
     description: Protect branch main from commits
     block_commits: True
 
 
   # Branch name - This was first branch name in this repository
-  some_branch_name:
+  base_version_of_tool:
+
+    # Branch description (optional)
     description: Validate changes on base version of tool branch (first branch)
+
+    # Don't block commits on this branch
     block_commits: False
+
+    # Show output for this branch
     output: True
+
+    # Run tasks for this branch before commit
     tasks:
       - install pip package
       - install pip test packages
@@ -23,40 +44,66 @@ pre-commit:
       - pytest (coverage tests - shell output)
       - pytest (coverage tests - html output)
 
-  # ANY other branch name - this can be used to define any task on any branch which is not listed in this stage
+
+  # ANY other branch name - this can be used to define default tasks which should be executed on every one branch
   ^*:
     description: This entry defines default tasks for each branch not listed in this stage
+
+    # You shouldn't  disable commits for all branch - developers needs to commits theirs changes :)
     block_commits: False
-    output: False
+
+    # Default - don't show output
+    output: True
+
+    # Tasks for all branches before commit
     tasks:
       - install pip package
       - install pip test packages
       - flake8
       - pylint
       - mypy
+      - pytest (unit tests)
+      - pytest (coverage tests - shell output)
+      - pytest (coverage tests - html output)
+
+#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+#                                                    P R E    P U S H
+#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 pre-push:
+
+
   master:
     description: Protect branch master from push
     block_commits: True
+
 
   main:
     description: Protect branch main from push
     block_commits: True
 
-  some_branch_name:
+
+  base_version_of_tool:
     description: Rebase commits on base version of tool branch
     block_commits: False
     tasks:
       - Automatic rebase against the master
 
+
+  # ANY other branch name - this can be used to define default tasks which should be executed on every one branch
   ^*:
     description: This entry defines default tasks for each branch not listed in this stage
     block_commits: False
     tasks:
       - Automatic rebase against the master
 
+
+#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+#                                                    T A S K S
+#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
 tasks:
+
 
   install pip package:
     description:
@@ -64,7 +111,8 @@ tasks:
       - This is optional task but it's better to test current version of packages
     script:
       - pip install .
-    script output: False
+    script output: True
+
 
   install pip test packages:
     description:
@@ -72,15 +120,17 @@ tasks:
       - This is optional but if you forget to install some package - this will install it for you.
     script:
       - pip install .[test]
-    script output: False
+    script output: True
+
 
   flake8:
     description:
       - Validate changes by flake8
       - This job will
     script:
-      - flake8 src/* tests
+      - flake8 src/bifu tests
     script output: True
+
 
   flake8 (added only):
     description: Validate only added changes by flake8
@@ -88,11 +138,13 @@ tasks:
       - flake8 $(git diff --cached --name-only --diff-filter=ACMR | grep .py$)
     script output: True
 
+
   pylint:
     description: Run pylint with paths to src and tests
     script:
-      - pylint --rcfile .pylintrcfile --disable=E0401 --disable=F0001 src/* tests
+      - pylint --rcfile .pylintrcfile --disable=E0401 --disable=F0001 src/bifu tests
     script output: True
+
 
   pylint (added only):
     description: Run pylint with paths to only added files
@@ -100,11 +152,13 @@ tasks:
       - pylint --rcfile .pylintrcfile --disable=E0401  --disable=F0001 $(git diff --cached --name-only --diff-filter=ACMR | grep .py$)
     script output: True
 
+
   mypy:
     description: Validate changes by mypy
     script:
-      - mypy --ignore-missing-imports src/*
+      - mypy --ignore-missing-imports src/bifu
     script output: True
+
 
   mypy (added only):
     description: Validate changes by mypy
@@ -112,29 +166,33 @@ tasks:
       - mypy --ignore-missing-imports $(git diff --cached --name-only --diff-filter=ACMR | grep .py$)
     script output: True
 
+
   pytest (unit tests):
     description: Run unit tests
     script:
       - pytest -v -n auto -m "not integration" tests/unit
     script output: True
 
+
   pytest (coverage tests - shell output):
     description: Run unit tests
     script:
-      - pytest -v -n auto --cov-config=.coveragerc --cov $(cat pyproject.toml | grep "^name" | awk 'BEGIN {FS="="}{print $2}' | sed -e 's/ //g' -e 's/"//g') --cov=tests --cov-report term-missing:skip-covered tests
+      - pytest -v -n auto --cov-config=.coveragerc --cov bifu --cov=tests --cov-report term-missing:skip-covered tests
     script output: True
     after script:
       - rm .coverage
+
 
   pytest (coverage tests - html output):
     description: Run unit tests
     before script:
       - rm -rf htmlcov
     script:
-      - pytest -v -n auto --cov-config=.coveragerc --cov $(cat pyproject.toml | grep "^name" | awk 'BEGIN {FS="="}{print $2}' | sed -e 's/ //g' -e 's/"//g') --cov=tests --cov-report html tests
+      - pytest -v -n auto --cov-config=.coveragerc --cov bifu --cov=tests --cov-report html tests
     script output: True
     after script:
       - rm .coverage
+
 
   Automatic rebase against the master:
     description: Automaticaly rebase all commits against master
@@ -142,36 +200,33 @@ tasks:
       - git rebase --interactive --autosquash master
     script output: True
 
+
   Automatic rebase against the main:
     description: Automaticaly rebase all commits against main
     script:
       - git rebase --interactive --autosquash main
     script output: True
 
-  empty script stage:
-    description: Empty task
+
+#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+#                                              T H E M E    S E T T I N G S
+#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+# To remove colors from output set theme.themed to False or remove theme section
 
 theme:
   themed: True
 
   tasks_bar: 43;31m
+  commands_bar: 7;1m
+
+  output: 84;40m
+  output_ok: 32;40m
+  output_failed: 31;40m
+
   status_ok: 42;97m
   status_wait: 33m
   status_failed: 41;37m
-  commands_bar: 7;1m
 
-  output: 84;40m         # BG: dark gray   FC: light gray
-  output_failed: 31;40m
-  output_ok: 32;40m
-
-  stage_bar: asd
-  stage_name_bar: asd
-  yellow: 33m
-  green: 42;97m
-  red: 41;37m
-  white_bar: 7;1m
   grey_bar: 54;40m
-
   light_grey_bar: 100;97m
-
-
